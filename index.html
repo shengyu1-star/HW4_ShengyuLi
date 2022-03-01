@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <style>
+        .chart-container {
+            max-width: 1050px;
+            /* border: 3px solid red; */
+            margin: 0 auto;
+            /* auto centers the div */
+            font-family: 'Franklin Gothic Medium', Arial, sans-serif;
+        }
+
+        svg {
+            /* border: 2px solid purple; */
+            overflow: visible;
+
+        }
+
+
+        h1 {
+            text-align: center;
+            /* border: 2px solid green; */
+        }
+
+        .pop-up {
+            position: absolute; 
+            border: 1px solid black;
+            border-radius: 1px;
+            line-height: 1.2;
+            width: 200px;
+            pointer-events: none;
+            background-color: white;
+            padding: 10px;
+        }
+
+
+    </style>
+    <!-- add your script blocks at the end -->
+
+</head>
+
+<body>
+    <div class="chart-container">
+        <h1 class="headline">
+            Number of Children Under Poverty in 2019 
+        </h1>
+
+        <h2 style="color:white">
+        tabtabtabtab
+        </h2>
+
+        <svg width="1050px" height="500px">
+
+        </svg>
+        <div class="pop-up">
+        </div>
+    </div>
+</body>
+
+
+<!-- we're using d3 version 6 (the latest version) for all out work -->
+<script src="https://d3js.org/d3.v6.min.js"></script>
+
+<!-- load topojson script -->
+<script src="https://unpkg.com/topojson@3"></script>
+
+<script>
+    console.log({ d3 })
+    console.log({ topojson })
+    let width = 1050;
+    let height = 500;
+    let svg = d3.select("body").select("svg")
+
+    let margin = { top: 50, right: 10, bottom: 0, left: 20}
+
+    d3.json("bubbles.json").then(function (data){
+        console.log({data})
+        let counties = topojson.feature(data, data.objects.county);
+        let states = topojson.feature(data, data.objects.state);
+        console.log(counties)
+
+        let projection = d3.geoIdentity()
+            .fitSize([width, height], states)
+            .reflectY(true)
+
+        let path = d3.geoPath(projection)
+
+        svg.append("g")
+        .attr("class", "states")
+        .selectAll("path")
+        .data(states.features)
+        .join("path")
+        .attr("d", path)
+        .attr("fill", "#eee")
+        .attr("stroke", "black")
+        .attr("stroke-width", 1.5)
+
+        let circles = svg.append("g")
+        .selectAll(".circles")
+        .data(counties.features.filter(d => d.geometry !=null)
+        .sort((a, b) => d3.descending(a.properties.pop_18_in_poverty, b.properties.pop_18_in_poverty))
+        )
+        .join("circle")
+        .attr("class", function (d){ return "circles p-"+d.properties.GEOID})
+        .attr("cx", d => {
+                return path.centroid(d)[0]
+            })
+        .attr("cy", d => {
+                return path.centroid(d)[1]
+            })
+        .attr("fill", "orange")
+        .style("stroke", "#333333")
+        .style("stroke-width", .5)
+        .attr("fill-opacity", 0.6)
+        .attr("stroke", "#fff")
+        .attr("r", d => Math.sqrt(d.properties.pop_18_in_poverty/300))
+
+
+
+let popup = d3.select(".pop-up");
+circles.on("mouseover", (event, d) => {
+
+circles
+    .style("stroke", "#333333")
+    .style("fill", "orange")
+    .style("fill-opacity", .6)
+
+svg.select(".p-" + d.properties.GEOID)
+    .style("stroke", "black")
+    .style("stroke-width", 2)
+    .style("fill", "yellow")
+    .style("fill-opacity", 1)
+    .raise()
+
+let reScaleLang = d3.scaleThreshold()
+    .domain([0]) //make sure to put this in brackets!
+    .range(["below", "above"])
+
+let lang = "In " + d.properties.Geo_QName + ",  the number of children under poverty in 2019 is " + d.properties.pop_18_in_poverty + "."
+
+
+popup
+    .style("opacity", 1)
+    .style("left", (event.x - 80) + "px")
+    .style("top", (event.y - 140) + "px")
+    .html(lang)
+
+})
+
+
+circles.on("mouseout", (event, d) => {
+console.log(event)
+circles
+    .style("stroke", "#333333")
+    .style("stroke-width", .5)
+    .style("fill", "orange")
+    .style("fill-opacity", .6)
+
+popup
+    .style("opacity", 0)
+
+})
+    })
+
+</script>
